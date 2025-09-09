@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Portfolio Tracker",
-  description: "Comprehensive portfolio tracking with IBKR integration",
+  description: "Comprehensive portfolio tracking with manual asset entry",
 };
 
 export default function RootLayout({
