@@ -21,7 +21,7 @@ export interface IBKRCSVRow {
   putCall?: 'P' | 'C';
   
   // Additional fields that may appear
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface IBKRCSVParseOptions {
@@ -185,7 +185,7 @@ export class IBKRCSVParser {
       } else if (/^[A-Z]{1,5}$/.test(field)) {
         row.symbol = field;
       } else if (/^(BUY|SELL|BUY_TO_COVER|SELL_SHORT)$/i.test(field)) {
-        row.side = field.toUpperCase() as any;
+        row.side = field.toUpperCase() as IBKRCSVRow['side'];
       } else if (/^\d+(\.\d+)?$/.test(field)) {
         if (!row.quantity) {
           row.quantity = parseFloat(field);

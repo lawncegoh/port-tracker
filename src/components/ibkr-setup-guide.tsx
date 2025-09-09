@@ -169,7 +169,7 @@ export function IBKRSetupGuide() {
                 <li>• <strong>Secure:</strong> No direct access to your broker credentials</li>
                 <li>• <strong>Read-Only:</strong> Can only view data, never execute trades</li>
                 <li>• <strong>Flexible:</strong> Set custom permissions and expiration dates</li>
-                <li>• <strong>Reliable:</strong> Uses IBKR's official Flex Query system</li>
+                <li>• <strong>Reliable:</strong> Uses IBKR&rsquo;s official Flex Query system</li>
                 <li>• <strong>Safe:</strong> Portfolio tracker never touches your money or assets</li>
               </ul>
             </div>
@@ -180,7 +180,7 @@ export function IBKRSetupGuide() {
           <div className="flex items-start gap-2">
             <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
             <div className="text-sm text-green-800 dark:text-green-200">
-              <p className="font-medium mb-1">What You'll Need:</p>
+              <p className="font-medium mb-1">What You&rsquo;ll Need:</p>
               <ul className="space-y-1 ml-4">
                 <li>• <strong>Flex Token:</strong> Your secure access token</li>
                 <li>• <strong>Activity Flex Query ID:</strong> Your portfolio data query identifier</li>

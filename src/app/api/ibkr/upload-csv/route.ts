@@ -71,9 +71,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Get repository instance
-    const repo = getRepo();
+    const repo = await getRepo();
     
-    let result: any = {
+    const result: Record<string, unknown> = {
       message: 'CSV processed successfully',
       dataType: actualDataType,
       rowsProcessed: parsedRows.length,

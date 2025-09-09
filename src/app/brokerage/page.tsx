@@ -11,6 +11,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef } from "react";
 import { RefreshCw, Plus, Edit, Trash2, AlertCircle, Upload, Download, FileText } from "lucide-react";
 import { getRepo } from "@/lib/repo/factory";
+import { Position, Trade } from "@/lib/types";
 
 export default function BrokeragePage() {
   const [activeTab, setActiveTab] = useState<'positions' | 'trades' | 'stats'>('positions');
@@ -42,9 +43,18 @@ export default function BrokeragePage() {
     queryKey: ['summary'],
     queryFn: async () => {
       // Calculate summary from positions
-      const totalMarketValue = positions.reduce((sum: number, pos: any) => sum + pos.marketValue, 0);
-      const totalCostBasis = positions.reduce((sum: number, pos: any) => sum + pos.costBasis, 0);
-      const totalUnrealizedPnL = positions.reduce((sum: number, pos: any) => sum + pos.unrealizedPnL, 0);
+      const totalMarketValue = positions.reduce(
+        (sum: number, pos: Position) => sum + pos.marketValue,
+        0
+      );
+      const totalCostBasis = positions.reduce(
+        (sum: number, pos: Position) => sum + pos.costBasis,
+        0
+      );
+      const totalUnrealizedPnL = positions.reduce(
+        (sum: number, pos: Position) => sum + pos.unrealizedPnL,
+        0
+      );
       
       return {
         netAssetValue: totalMarketValue,
@@ -174,8 +184,14 @@ export default function BrokeragePage() {
     }
   });
 
-  const totalMarketValue = positions.reduce((sum: number, pos: any) => sum + pos.marketValue, 0);
-  const totalUnrealizedPnL = positions.reduce((sum: number, pos: any) => sum + pos.unrealizedPnL, 0);
+  const totalMarketValue = positions.reduce(
+    (sum: number, pos: Position) => sum + pos.marketValue,
+    0
+  );
+  const totalUnrealizedPnL = positions.reduce(
+    (sum: number, pos: Position) => sum + pos.unrealizedPnL,
+    0
+  );
 
   const handleAddPosition = () => {
     // TODO: Implement add position modal/form
@@ -414,7 +430,7 @@ GOOGL,25,140.00,142.50,62.50,IBKR-001`;
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {positions.map((position) => (
+                    {positions.map((position: Position) => (
                       <TableRow key={position.id}>
                         <TableCell className="font-medium">{position.symbol}</TableCell>
                         <TableCell>{position.quantity.toLocaleString()}</TableCell>
@@ -509,7 +525,7 @@ GOOGL,25,140.00,142.50,62.50,IBKR-001`;
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {trades.map((trade) => (
+                    {trades.map((trade: Trade) => (
                       <TableRow key={trade.id}>
                         <TableCell>{new Date(trade.timestamp).toLocaleDateString()}</TableCell>
                         <TableCell className="font-medium">{trade.symbol}</TableCell>
@@ -591,7 +607,11 @@ GOOGL,25,140.00,142.50,62.50,IBKR-001`;
                 <label className="block text-sm font-medium mb-2">Data Type</label>
                 <select
                   value={uploadDataType}
-                  onChange={(e) => setUploadDataType(e.target.value as any)}
+                  onChange={(e) =>
+                    setUploadDataType(
+                      e.target.value as 'auto' | 'positions' | 'trades'
+                    )
+                  }
                   className="w-full p-2 border rounded-md bg-background"
                 >
                   <option value="auto">Auto-detect</option>
