@@ -4,7 +4,6 @@ import { Navigation } from "@/components/navigation";
 import { MetricCard } from "@/components/ui/metric-card";
 import { ChartCard } from "@/components/ui/chart-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { IBKRSetupGuide } from "@/components/ibkr-setup-guide";
 import { useQuery } from "@tanstack/react-query";
 import { getRepo } from "@/lib/repo/factory";
 import {
@@ -79,13 +78,13 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <MetricCard
               title="Total Net Worth"
-              value={totalNetWorth > 0 ? `$${totalNetWorth.toLocaleString()}` : "Upload data to view"}
-              subtitle={totalNetWorth > 0 ? "As of today" : "Upload IBKR CSV and add other assets"}
+              value={totalNetWorth > 0 ? `$${totalNetWorth.toLocaleString()}` : "Add data to view"}
+              subtitle={totalNetWorth > 0 ? "As of today" : "Add positions and assets"}
             />
             <MetricCard
               title="Portfolio Value"
-              value={totalPortfolioValue > 0 ? `$${totalPortfolioValue.toLocaleString()}` : "Upload CSV to view"}
-              subtitle={totalPortfolioValue > 0 ? "Brokerage accounts" : "Upload IBKR CSV export"}
+              value={totalPortfolioValue > 0 ? `$${totalPortfolioValue.toLocaleString()}` : "Add positions to view"}
+              subtitle={totalPortfolioValue > 0 ? "Brokerage accounts" : "Add your brokerage positions"}
             />
             <MetricCard
               title="Real Estate Equity"
@@ -98,14 +97,14 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ChartCard title="Asset Allocation">
               <div className="h-64 flex items-center justify-center text-muted-foreground">
-                {totalPortfolioValue > 0 ? (
+                {totalPortfolioValue > 0 || totalRealEstateEquity > 0 || totalOtherAssets > 0 ? (
                   <div className="text-center">
                     <p>Portfolio: ${totalPortfolioValue.toLocaleString()}</p>
                     <p>Real Estate: ${totalRealEstateEquity.toLocaleString()}</p>
                     <p>Other Assets: ${totalOtherAssets.toLocaleString()}</p>
                   </div>
                 ) : (
-                  <p>Upload IBKR CSV to view asset allocation</p>
+                  <p>Add assets to view allocation</p>
                 )}
               </div>
             </ChartCard>

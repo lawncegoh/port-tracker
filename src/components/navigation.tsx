@@ -2,10 +2,6 @@
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRouter, usePathname } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { useIBKRConnection } from "@/hooks/use-ibkr-connection";
-import { RefreshCw } from "lucide-react";
 
 export function Navigation() {
   const router = useRouter();
@@ -41,39 +37,9 @@ export function Navigation() {
                 <TabsTrigger value="settings">Settings</TabsTrigger>
               </TabsList>
             </Tabs>
-            
-            <ConnectionStatus />
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function ConnectionStatus() {
-  const { isConnected, lastSyncText, syncData, isSyncing } = useIBKRConnection();
-  
-  return (
-    <div className="flex items-center gap-3">
-      <div className="text-right">
-        <div className="text-xs text-muted-foreground">Last sync</div>
-        <div className="text-sm font-medium">{lastSyncText}</div>
-      </div>
-      
-      <Button
-        onClick={syncData}
-        disabled={isSyncing}
-        size="sm"
-        variant="outline"
-        className="flex items-center gap-2"
-      >
-        <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-        {isSyncing ? 'Syncing...' : 'Sync'}
-      </Button>
-      
-      <Badge variant={isConnected ? "default" : "destructive"}>
-        {isConnected ? "IBKR Connected" : "IBKR Disconnected"}
-      </Badge>
     </div>
   );
 }

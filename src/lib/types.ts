@@ -37,7 +37,7 @@ export interface RealEstateProperty {
 export interface OtherAsset {
   id: string;
   name: string;
-  type: 'CASH' | 'CRYPTO' | 'PRIVATE_INVESTMENT' | 'OTHER';
+  type: 'CASH' | 'CRYPTO' | 'PRIVATE_INVESTMENT' | 'CPF' | 'OTHER';
   value: number;
   currency: string;
   lastUpdated: Date;

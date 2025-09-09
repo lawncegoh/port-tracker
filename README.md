@@ -1,6 +1,6 @@
 # Portfolio Tracker
 
-A comprehensive portfolio tracking application with IBKR integration, real estate tracking, and net worth aggregation.
+A portfolio tracking application supporting manual entry for brokerage positions, real estate, and other assets with net worth aggregation.
 
 ## Features
 
@@ -8,7 +8,6 @@ A comprehensive portfolio tracking application with IBKR integration, real estat
 - **Brokerage Tab**: Track positions, trades, and portfolio statistics
 - **Real Estate Tab**: Manage properties, loans, and equity calculations
 - **Others Tab**: Track other assets (cash, crypto, private investments) and liabilities
-- **IBKR Integration**: Real-time connection to Interactive Brokers Gateway
 - **Data Persistence**: Configurable storage (in-memory or SQLite)
 
 ## Tech Stack
@@ -26,7 +25,6 @@ A comprehensive portfolio tracking application with IBKR integration, real estat
 
 - Node.js 18+ 
 - pnpm (recommended) or npm
-- IBKR Gateway running on localhost:5000 (optional)
 
 ### Installation
 
@@ -66,13 +64,6 @@ The application supports two data storage modes:
 - **Memory** (`DATA_STORE=memory`): In-memory storage with sample data (default)
 - **SQLite** (`DATA_STORE=sqlite`): Persistent SQLite database (requires Prisma setup)
 
-### IBKR Integration
-
-To connect to Interactive Brokers:
-
-1. Install and configure IBKR Gateway
-2. Ensure it's running on `https://localhost:5000`
-3. The app will automatically detect connection status
 
 ## Project Structure
 
@@ -80,7 +71,6 @@ To connect to Interactive Brokers:
 src/
 ├── app/                    # Next.js App Router pages
 │   ├── api/               # API routes
-│   │   ├── ibkr/         # IBKR integration endpoints
 │   │   ├── stats/        # Portfolio statistics
 │   │   └── networth/     # Net worth aggregation
 │   ├── brokerage/        # Brokerage tab page
@@ -98,13 +88,6 @@ src/
 ```
 
 ## API Endpoints
-
-### IBKR Integration
-- `GET /api/ibkr/health` - Check IBKR Gateway connectivity
-- `GET /api/ibkr/accounts` - List IBKR accounts
-- `GET /api/ibkr/positions` - Get current positions
-- `GET /api/ibkr/trades` - Get trade history
-- `GET /api/ibkr/summary` - Get account summary
 
 ### Portfolio Data
 - `GET /api/stats/portfolio` - Get portfolio statistics
@@ -187,7 +170,6 @@ For issues and questions:
 
 ## Roadmap
 
-- [ ] Real-time IBKR data sync
 - [ ] Advanced charting with Recharts
 - [ ] Export functionality (CSV, PDF)
 - [ ] Mobile app
