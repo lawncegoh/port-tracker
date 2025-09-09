@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRepo } from '@/lib/repo/factory';
+import { Position } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,9 +9,18 @@ export async function GET(request: NextRequest) {
     const trades = await repo.listTrades();
     
     // Calculate summary from positions and trades
-    const totalMarketValue = positions.reduce((sum, pos) => sum + pos.marketValue, 0);
-    const totalUnrealizedPnL = positions.reduce((sum, pos) => sum + pos.unrealizedPnL, 0);
-    const totalRealizedPnL = positions.reduce((sum, pos) => sum + pos.realizedPnL, 0);
+    const totalMarketValue = positions.reduce(
+      (sum: number, pos: Position) => sum + pos.marketValue,
+      0
+    );
+    const totalUnrealizedPnL = positions.reduce(
+      (sum: number, pos: Position) => sum + pos.unrealizedPnL,
+      0
+    );
+    const totalRealizedPnL = positions.reduce(
+      (sum: number, pos: Position) => sum + pos.realizedPnL,
+      0
+    );
     
     // Mock cash balance - in real implementation this would come from IBKR
     const cashBalance = 25000;

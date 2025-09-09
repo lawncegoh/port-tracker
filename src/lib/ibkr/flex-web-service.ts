@@ -8,7 +8,7 @@ export interface IBKRFlexResponse {
   status: 'success' | 'error';
   message?: string;
   referenceCode?: string;
-  data?: any;
+  data?: unknown;
 }
 
 export class IBKRFlexWebService {
@@ -199,10 +199,10 @@ export class IBKRFlexWebService {
    * Parse CSV response from IBKR
    * Handles various response formats
    */
-  private parseCSVResponse(responseText: string): any[] {
+  private parseCSVResponse(responseText: string): string[][] {
     try {
       const lines = responseText.trim().split('\n');
-      const rows: any[] = [];
+      const rows: string[][] = [];
       
       // Skip header row
       for (let i = 1; i < lines.length; i++) {

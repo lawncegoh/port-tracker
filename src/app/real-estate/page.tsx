@@ -10,27 +10,31 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Plus, Edit, Trash2, Calculator } from "lucide-react";
+import { RealEstateProperty } from "@/lib/types";
 
 export default function RealEstatePage() {
   const [showAddForm, setShowAddForm] = useState(false);
 
   // Fetch properties data
-  const { data: properties = [] } = useQuery({
+  const { data: properties = [] } = useQuery<RealEstateProperty[]>({
     queryKey: ['properties'],
     queryFn: async () => {
       // In a real app, this would fetch from the repository
       // For now, return empty array - will be populated when properties are added
-      return [];
+      return [] as RealEstateProperty[];
     }
   });
 
-  const totalEquity = properties.reduce((sum: number, prop: any) => {
-    return sum + (prop.currentValue - prop.loanPrincipal);
-  }, 0);
+  const totalEquity = properties.reduce(
+    (sum: number, prop: RealEstateProperty) =>
+      sum + (prop.currentValue - prop.loanPrincipal),
+    0
+  );
 
-  const totalLoanBalance = properties.reduce((sum: number, prop: any) => {
-    return sum + prop.loanPrincipal;
-  }, 0);
+  const totalLoanBalance = properties.reduce(
+    (sum: number, prop: RealEstateProperty) => sum + prop.loanPrincipal,
+    0
+  );
 
   const handleAddProperty = () => {
     // TODO: Implement add property modal/form
@@ -83,7 +87,10 @@ export default function RealEstatePage() {
             />
             <MetricCard
               title="Monthly Payments"
-              value={`$${properties.reduce((sum: number, p: any) => sum + p.monthlyPayment, 0).toLocaleString()}`}
+              value={`$${properties.reduce(
+                (sum: number, p: RealEstateProperty) => sum + p.monthlyPayment,
+                0
+              ).toLocaleString()}`}
               subtitle="Total mortgage payments"
             />
           </div>
@@ -104,7 +111,7 @@ export default function RealEstatePage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {properties.map((property: any) => (
+              {properties.map((property: RealEstateProperty) => (
                 <Card key={property.id}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
@@ -223,7 +230,7 @@ export default function RealEstatePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {properties.map((property: any) => (
+                {properties.map((property: RealEstateProperty) => (
                   <TableRow key={property.id}>
                     <TableCell className="font-medium">{property.name}</TableCell>
                     <TableCell>{new Date(property.purchaseDate).toLocaleDateString()}</TableCell>

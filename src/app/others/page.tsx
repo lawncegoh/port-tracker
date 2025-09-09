@@ -8,39 +8,56 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+import { useState, ReactNode } from "react";
 import { Plus, Edit, Trash2, DollarSign, CreditCard, Home, PiggyBank } from "lucide-react";
+import { OtherAsset, Liability } from "@/lib/types";
 
 export default function OthersPage() {
   const [activeTab, setActiveTab] = useState<'assets' | 'liabilities'>('assets');
 
   // Mock data - in a real app this would come from the repository
-  const assets: any[] = [];
-  const liabilities: any[] = [];
+  const assets: OtherAsset[] = [];
+  const liabilities: Liability[] = [];
 
-  const totalAssets = assets.reduce((sum, asset) => sum + asset.value, 0);
-  const totalLiabilities = liabilities.reduce((sum, liability) => sum + liability.balance, 0);
+  const totalAssets = assets.reduce(
+    (sum: number, asset: OtherAsset) => sum + asset.value,
+    0
+  );
+  const totalLiabilities = liabilities.reduce(
+    (sum: number, liability: Liability) => sum + liability.balance,
+    0
+  );
   const netWorth = totalAssets - totalLiabilities;
 
-  const getAssetTypeColor = (type: string) => {
+  type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
+
+  const getAssetTypeColor = (type: string): BadgeVariant => {
     switch (type) {
-      case 'CASH': return 'default';
-      case 'CRYPTO': return 'secondary';
-      case 'PRIVATE_INVESTMENT': return 'outline';
-      default: return 'default';
+      case 'CASH':
+        return 'default';
+      case 'CRYPTO':
+        return 'secondary';
+      case 'PRIVATE_INVESTMENT':
+        return 'outline';
+      default:
+        return 'default';
     }
   };
 
-  const getLiabilityTypeColor = (type: string) => {
+  const getLiabilityTypeColor = (type: string): BadgeVariant => {
     switch (type) {
-      case 'CREDIT_CARD': return 'destructive';
-      case 'LOAN': return 'secondary';
-      case 'MORTGAGE': return 'outline';
-      default: return 'default';
+      case 'CREDIT_CARD':
+        return 'destructive';
+      case 'LOAN':
+        return 'secondary';
+      case 'MORTGAGE':
+        return 'outline';
+      default:
+        return 'default';
     }
   };
 
-  const getAssetTypeIcon = (type: string) => {
+  const getAssetTypeIcon = (type: string): ReactNode => {
     switch (type) {
       case 'CASH': return <DollarSign className="h-4 w-4" />;
       case 'CRYPTO': return <PiggyBank className="h-4 w-4" />;
@@ -49,7 +66,7 @@ export default function OthersPage() {
     }
   };
 
-  const getLiabilityTypeIcon = (type: string) => {
+  const getLiabilityTypeIcon = (type: string): ReactNode => {
     switch (type) {
       case 'CREDIT_CARD': return <CreditCard className="h-4 w-4" />;
       case 'LOAN': return <DollarSign className="h-4 w-4" />;
@@ -127,7 +144,10 @@ export default function OthersPage() {
             />
             <MetricCard
               title="Monthly Payments"
-              value={`$${liabilities.reduce((sum, l) => sum + l.monthlyPayment, 0).toLocaleString()}`}
+              value={`$${liabilities.reduce(
+                (sum: number, l: Liability) => sum + l.monthlyPayment,
+                0
+              ).toLocaleString()}`}
               subtitle="Total monthly debt payments"
             />
           </div>
@@ -167,7 +187,7 @@ export default function OthersPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {assets.map((asset) => (
+                  {assets.map((asset: OtherAsset) => (
                     <Card key={asset.id}>
                       <CardHeader>
                         <CardTitle className="flex items-center justify-between">
@@ -195,7 +215,7 @@ export default function OthersPage() {
                       </CardHeader>
                       <CardContent className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <Badge variant={getAssetTypeColor(asset.type) as any}>
+                          <Badge variant={getAssetTypeColor(asset.type)}>
                             {asset.type.replace('_', ' ')}
                           </Badge>
                           <span className="text-sm text-muted-foreground">
@@ -253,11 +273,11 @@ export default function OthersPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {assets.map((asset) => (
+                      {assets.map((asset: OtherAsset) => (
                         <TableRow key={asset.id}>
                           <TableCell className="font-medium">{asset.name}</TableCell>
                           <TableCell>
-                            <Badge variant={getAssetTypeColor(asset.type) as any}>
+                            <Badge variant={getAssetTypeColor(asset.type)}>
                               {asset.type.replace('_', ' ')}
                             </Badge>
                           </TableCell>
@@ -302,7 +322,7 @@ export default function OthersPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {liabilities.map((liability) => (
+                  {liabilities.map((liability: Liability) => (
                     <Card key={liability.id}>
                       <CardHeader>
                         <CardTitle className="flex items-center justify-between">
@@ -330,7 +350,7 @@ export default function OthersPage() {
                       </CardHeader>
                       <CardContent className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <Badge variant={getLiabilityTypeColor(liability.type) as any}>
+                          <Badge variant={getLiabilityTypeColor(liability.type)}>
                             {liability.type.replace('_', ' ')}
                           </Badge>
                           <span className="text-sm text-muted-foreground">
@@ -396,11 +416,11 @@ export default function OthersPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {liabilities.map((liability) => (
+                      {liabilities.map((liability: Liability) => (
                         <TableRow key={liability.id}>
                           <TableCell className="font-medium">{liability.name}</TableCell>
                           <TableCell>
-                            <Badge variant={getLiabilityTypeColor(liability.type) as any}>
+                            <Badge variant={getLiabilityTypeColor(liability.type)}>
                               {liability.type.replace('_', ' ')}
                             </Badge>
                           </TableCell>

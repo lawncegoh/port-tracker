@@ -7,10 +7,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { IBKRSetupGuide } from "@/components/ibkr-setup-guide";
 import { useQuery } from "@tanstack/react-query";
 import { getRepo } from "@/lib/repo/factory";
+import {
+  Position,
+  RealEstateProperty,
+  OtherAsset,
+  Liability,
+} from "@/lib/types";
 
 export default function Dashboard() {
   // Fetch portfolio data
-  const { data: positions = [] } = useQuery({
+  const { data: positions = [] } = useQuery<Position[]>({
     queryKey: ['positions'],
     queryFn: async () => {
       const repo = await getRepo();
@@ -18,7 +24,7 @@ export default function Dashboard() {
     }
   });
 
-  const { data: properties = [] } = useQuery({
+  const { data: properties = [] } = useQuery<RealEstateProperty[]>({
     queryKey: ['properties'],
     queryFn: async () => {
       const repo = await getRepo();
@@ -26,7 +32,7 @@ export default function Dashboard() {
     }
   });
 
-  const { data: assets = [] } = useQuery({
+  const { data: assets = [] } = useQuery<OtherAsset[]>({
     queryKey: ['assets'],
     queryFn: async () => {
       const repo = await getRepo();
@@ -34,7 +40,7 @@ export default function Dashboard() {
     }
   });
 
-  const { data: liabilities = [] } = useQuery({
+  const { data: liabilities = [] } = useQuery<Liability[]>({
     queryKey: ['liabilities'],
     queryFn: async () => {
       const repo = await getRepo();
@@ -43,12 +49,23 @@ export default function Dashboard() {
   });
 
   // Calculate totals
-  const totalPortfolioValue = positions.reduce((sum: number, pos: any) => sum + pos.marketValue, 0);
-  const totalRealEstateEquity = properties.reduce((sum: number, prop: any) => {
-    return sum + (prop.currentValue - prop.loanPrincipal);
-  }, 0);
-  const totalOtherAssets = assets.reduce((sum: number, asset: any) => sum + asset.value, 0);
-  const totalLiabilities = liabilities.reduce((sum: number, liab: any) => sum + liab.balance, 0);
+  const totalPortfolioValue = positions.reduce(
+    (sum: number, pos: Position) => sum + pos.marketValue,
+    0
+  );
+  const totalRealEstateEquity = properties.reduce(
+    (sum: number, prop: RealEstateProperty) =>
+      sum + (prop.currentValue - prop.loanPrincipal),
+    0
+  );
+  const totalOtherAssets = assets.reduce(
+    (sum: number, asset: OtherAsset) => sum + asset.value,
+    0
+  );
+  const totalLiabilities = liabilities.reduce(
+    (sum: number, liab: Liability) => sum + liab.balance,
+    0
+  );
   
   const totalNetWorth = totalPortfolioValue + totalRealEstateEquity + totalOtherAssets - totalLiabilities;
 

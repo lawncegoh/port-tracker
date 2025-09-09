@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRepo } from '@/lib/repo/factory';
+import {
+  Position,
+  RealEstateProperty,
+  OtherAsset,
+  Liability,
+} from '@/lib/types';
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,12 +26,23 @@ export async function GET(request: NextRequest) {
     );
     
     // Calculate current net worth
-    const brokerageValue = positions.reduce((sum, pos) => sum + pos.marketValue, 0);
-    const realEstateEquity = properties.reduce((sum, prop) => {
-      return sum + (prop.currentValue - prop.loanPrincipal);
-    }, 0);
-    const otherAssetsValue = assets.reduce((sum, asset) => sum + asset.value, 0);
-    const totalLiabilities = liabilities.reduce((sum, liab) => sum + liab.balance, 0);
+    const brokerageValue = positions.reduce(
+      (sum: number, pos: Position) => sum + pos.marketValue,
+      0
+    );
+    const realEstateEquity = properties.reduce(
+      (sum: number, prop: RealEstateProperty) =>
+        sum + (prop.currentValue - prop.loanPrincipal),
+      0
+    );
+    const otherAssetsValue = assets.reduce(
+      (sum: number, asset: OtherAsset) => sum + asset.value,
+      0
+    );
+    const totalLiabilities = liabilities.reduce(
+      (sum: number, liab: Liability) => sum + liab.balance,
+      0
+    );
     
     const currentNetWorth = brokerageValue + realEstateEquity + otherAssetsValue - totalLiabilities;
     
@@ -97,12 +114,23 @@ export async function POST(request: NextRequest) {
     const assets = await repo.listAssets();
     const liabilities = await repo.listLiabilities();
     
-    const brokerageValue = positions.reduce((sum, pos) => sum + pos.marketValue, 0);
-    const realEstateEquity = properties.reduce((sum, prop) => {
-      return sum + (prop.currentValue - prop.loanPrincipal);
-    }, 0);
-    const otherAssetsValue = assets.reduce((sum, asset) => sum + asset.value, 0);
-    const totalLiabilities = liabilities.reduce((sum, liab) => sum + liab.balance, 0);
+    const brokerageValue = positions.reduce(
+      (sum: number, pos: Position) => sum + pos.marketValue,
+      0
+    );
+    const realEstateEquity = properties.reduce(
+      (sum: number, prop: RealEstateProperty) =>
+        sum + (prop.currentValue - prop.loanPrincipal),
+      0
+    );
+    const otherAssetsValue = assets.reduce(
+      (sum: number, asset: OtherAsset) => sum + asset.value,
+      0
+    );
+    const totalLiabilities = liabilities.reduce(
+      (sum: number, liab: Liability) => sum + liab.balance,
+      0
+    );
     
     const snapshot = {
       id: `snapshot-${Date.now()}`,
