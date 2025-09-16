@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRepo } from '@/lib/repo/factory';
+import { getServerRepo as getRepo } from '@/lib/repo/server';
 import {
   Position,
   RealEstateProperty,
@@ -163,4 +163,6 @@ export async function POST(request: NextRequest) {
     }, { status: 500 });
   }
 }
+
+
 

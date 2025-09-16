@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRepo } from '@/lib/repo/factory';
+import { getServerRepo as getRepo } from '@/lib/repo/server';
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,4 +31,6 @@ export async function GET(request: NextRequest) {
     }, { status: 500 });
   }
 }
+
+
 

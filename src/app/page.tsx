@@ -5,7 +5,7 @@ import { MetricCard } from "@/components/ui/metric-card";
 import { ChartCard } from "@/components/ui/chart-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
-import { getRepo } from "@/lib/repo/factory";
+import { getClientRepo as getRepo } from "@/lib/repo/client";
 import {
   Position,
   RealEstateProperty,
@@ -47,11 +47,34 @@ export default function Dashboard() {
     }
   });
 
+  // Brokerage settings (margin/loan) and FX for USDSGD
+  const { data: brokerageSettings } = useQuery<{ marginLoan: number }>({
+    queryKey: ['brokerage-settings'],
+    queryFn: async () => {
+      const res = await fetch('/api/brokerage/settings');
+      if (!res.ok) return { marginLoan: 0 };
+      return res.json();
+    }
+  });
+  const { data: usdsgdQuote } = useQuery<{ symbol: string; price: number }>({
+    queryKey: ['fx', 'USDSGD=X'],
+    staleTime: 60_000,
+    queryFn: async () => {
+      const res = await fetch('/api/quote?symbol=USDSGD=X');
+      if (!res.ok) throw new Error('fx failed');
+      return res.json();
+    }
+  });
+
   // Calculate totals
   const totalPortfolioValue = positions.reduce(
     (sum: number, pos: Position) => sum + pos.marketValue,
     0
   );
+  const marginLoan = Number(brokerageSettings?.marginLoan || 0);
+  const netLiqUSD = totalPortfolioValue - marginLoan;
+  const usdsgd = Number(usdsgdQuote?.price || 0);
+  const netLiqSGD = usdsgd > 0 ? netLiqUSD * usdsgd : 0;
   const totalRealEstateEquity = properties.reduce(
     (sum: number, prop: RealEstateProperty) =>
       sum + (prop.currentValue - prop.loanPrincipal),
@@ -66,7 +89,8 @@ export default function Dashboard() {
     0
   );
   
-  const totalNetWorth = totalPortfolioValue + totalRealEstateEquity + totalOtherAssets - totalLiabilities;
+  // Total Net Worth uses Net Liq (SGD) for brokerage portion
+  const totalNetWorth = netLiqSGD + totalRealEstateEquity + totalOtherAssets - totalLiabilities;
 
   return (
     <div className="min-h-screen bg-background">
@@ -78,13 +102,13 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <MetricCard
               title="Total Net Worth"
-              value={totalNetWorth > 0 ? `$${totalNetWorth.toLocaleString()}` : "Add data to view"}
+              value={totalNetWorth > 0 ? `S$${totalNetWorth.toLocaleString()}` : "Add data to view"}
               subtitle={totalNetWorth > 0 ? "As of today" : "Add positions and assets"}
             />
             <MetricCard
-              title="Portfolio Value"
-              value={totalPortfolioValue > 0 ? `$${totalPortfolioValue.toLocaleString()}` : "Add positions to view"}
-              subtitle={totalPortfolioValue > 0 ? "Brokerage accounts" : "Add your brokerage positions"}
+              title="Portfolio (Net Liq, SGD)"
+              value={netLiqSGD > 0 ? `S$${netLiqSGD.toLocaleString()}` : "Add positions to view"}
+              subtitle={usdsgd > 0 ? `USDSGD=${usdsgd.toFixed(4)}` : "Brokerage accounts"}
             />
             <MetricCard
               title="Real Estate Equity"
@@ -97,9 +121,9 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ChartCard title="Asset Allocation">
               <div className="h-64 flex items-center justify-center text-muted-foreground">
-                {totalPortfolioValue > 0 || totalRealEstateEquity > 0 || totalOtherAssets > 0 ? (
+                {netLiqSGD > 0 || totalRealEstateEquity > 0 || totalOtherAssets > 0 ? (
                   <div className="text-center">
-                    <p>Portfolio: ${totalPortfolioValue.toLocaleString()}</p>
+                    <p>Portfolio (NLV, SGD): S${netLiqSGD.toLocaleString()}</p>
                     <p>Real Estate: ${totalRealEstateEquity.toLocaleString()}</p>
                     <p>Other Assets: ${totalOtherAssets.toLocaleString()}</p>
                   </div>
@@ -114,7 +138,7 @@ export default function Dashboard() {
                 {totalLiabilities > 0 ? (
                   <div className="text-center">
                     <p>Total Liabilities: ${totalLiabilities.toLocaleString()}</p>
-                    <p>Net Worth: ${totalNetWorth.toLocaleString()}</p>
+                    <p>Net Worth: S${totalNetWorth.toLocaleString()}</p>
                   </div>
                 ) : (
                   <p>Add liabilities to view breakdown</p>

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { getRepo } from "@/lib/repo/factory";
+import { getClientRepo as getRepo } from "@/lib/repo/client";
 import { OtherAsset, Liability } from "@/lib/types";
 import { Trash2 } from "lucide-react";
 
@@ -208,4 +208,3 @@ export default function OthersPage() {
     </div>
   );
 }
-

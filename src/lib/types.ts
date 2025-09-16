@@ -32,6 +32,18 @@ export interface RealEstateProperty {
   currentValue: number;
   monthlyPayment: number;
   purchaseDate: Date;
+  // Optional modeling fields
+  loanStartDate?: Date | null;
+  loanTermMonths?: number; // overrides loanTerm when provided
+  rateSchedule?: Array<{
+    start: Date; // effective date
+    rate: number; // annual rate in decimal, e.g., 0.035
+  }>;
+  disbursementSchedule?: Array<{
+    name: string;
+    percent: number; // 0..1 of purchase price
+    date?: Date | null; // when the stage is/was paid
+  }>;
 }
 
 export interface OtherAsset {
