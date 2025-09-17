@@ -7,6 +7,7 @@ import {
   Liability,
   NetWorthSnapshot,
   PortfolioStats,
+  Expense,
 } from '@/lib/types';
 
 async function http<T>(url: string, init?: RequestInit): Promise<T> {
@@ -124,5 +125,19 @@ export class WebRepo implements Repo {
   async getPortfolioStats(): Promise<PortfolioStats> {
     return http('/api/stats/portfolio');
   }
-}
 
+  // expenses
+  async saveExpense(expense: Expense): Promise<void> {
+    await http('/api/expenses', { method: 'POST', body: JSON.stringify(expense) });
+  }
+  async getExpense(id: string): Promise<Expense | null> {
+    return http(`/api/expenses/${id}`);
+  }
+  async listExpenses(month?: string): Promise<Expense[]> {
+    const q = month ? `?month=${encodeURIComponent(month)}` : '';
+    return http(`/api/expenses${q}`);
+  }
+  async deleteExpense(id: string): Promise<void> {
+    await http(`/api/expenses/${id}`, { method: 'DELETE' });
+  }
+}

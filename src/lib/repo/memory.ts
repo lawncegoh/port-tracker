@@ -8,6 +8,7 @@ import {
   NetWorthSnapshot,
   PortfolioStats
 } from '@/lib/types';
+import { Expense } from '@/lib/types';
 
 export class MemoryRepo implements Repo {
   private positions: Position[] = [];
@@ -16,6 +17,7 @@ export class MemoryRepo implements Repo {
   private assets: OtherAsset[] = [];
   private liabilities: Liability[] = [];
   private snapshots: NetWorthSnapshot[] = [];
+  private expenses: Expense[] = [];
 
   async initialize(): Promise<void> {
     // Initialize empty repository
@@ -29,6 +31,7 @@ export class MemoryRepo implements Repo {
     this.assets = [];
     this.liabilities = [];
     this.snapshots = [];
+    this.expenses = [];
   }
 
   // Positions
@@ -237,5 +240,27 @@ export class MemoryRepo implements Repo {
       ytdReturn: 0, // Will be calculated when data is available
       monthlyReturns: []
     };
+  }
+
+  // Expenses
+  async saveExpense(expense: Expense): Promise<void> {
+    const idx = this.expenses.findIndex(e => e.id === expense.id);
+    if (idx >= 0) this.expenses[idx] = expense; else this.expenses.push(expense);
+  }
+  async getExpense(id: string): Promise<Expense | null> {
+    return this.expenses.find(e => e.id === id) || null;
+  }
+  async listExpenses(month?: string): Promise<Expense[]> {
+    let list = this.expenses;
+    if (month) {
+      list = list.filter(e => {
+        const m = `${e.date.getFullYear()}-${String(e.date.getMonth()+1).padStart(2,'0')}`;
+        return m === month;
+      });
+    }
+    return list.sort((a,b) => b.date.getTime() - a.date.getTime());
+  }
+  async deleteExpense(id: string): Promise<void> {
+    this.expenses = this.expenses.filter(e => e.id !== id);
   }
 }

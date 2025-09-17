@@ -29,9 +29,10 @@ export function Navigation() {
           
           <div className="flex items-center gap-4">
             <Tabs value={getCurrentTab()} onValueChange={handleTabChange}>
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
                 <TabsTrigger value="brokerage">Brokerage</TabsTrigger>
+                <TabsTrigger value="budget">Budget</TabsTrigger>
                 <TabsTrigger value="real-estate">Real Estate</TabsTrigger>
                 <TabsTrigger value="others">Others</TabsTrigger>
                 <TabsTrigger value="settings">Settings</TabsTrigger>

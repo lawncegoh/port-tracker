@@ -9,6 +9,7 @@ import {
   NetWorthSnapshot,
   PortfolioStats
 } from '@/lib/types';
+import { Expense } from '@/lib/types';
 import fs from 'fs';
 import path from 'path';
 
@@ -19,6 +20,7 @@ type StoreShape = {
   assets: OtherAsset[];
   liabilities: Liability[];
   snapshots: NetWorthSnapshot[];
+  expenses: Expense[];
 };
 
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -63,12 +65,21 @@ function loadStore(): StoreShape {
       assets: [],
       liabilities: [],
       snapshots: [],
+      expenses: [],
     };
   }
   const raw = fs.readFileSync(DATA_FILE, 'utf-8');
   try {
-    const parsed = JSON.parse(raw);
-    return reviveDates(parsed);
+    const revived = reviveDates(JSON.parse(raw)) as Partial<StoreShape>;
+    return {
+      positions: revived.positions ?? [],
+      trades: revived.trades ?? [],
+      properties: revived.properties ?? [],
+      assets: revived.assets ?? [],
+      liabilities: revived.liabilities ?? [],
+      snapshots: revived.snapshots ?? [],
+      expenses: revived.expenses ?? [],
+    };
   } catch {
     return {
       positions: [],
@@ -77,6 +88,7 @@ function loadStore(): StoreShape {
       assets: [],
       liabilities: [],
       snapshots: [],
+      expenses: [],
     };
   }
 }
@@ -217,5 +229,26 @@ export class FileRepo implements Repo {
       ytdReturn: 0,
       monthlyReturns: []
     };
+  }
+
+  // Expenses
+  async saveExpense(expense: Expense): Promise<void> {
+    const idx = this.store.expenses.findIndex((e) => e.id === expense.id);
+    if (idx >= 0) this.store.expenses[idx] = expense; else this.store.expenses.push(expense);
+    saveStore(this.store);
+  }
+  async getExpense(id: string): Promise<Expense | null> {
+    return this.store.expenses.find((e) => e.id === id) || null;
+  }
+  async listExpenses(month?: string): Promise<Expense[]> {
+    let list = [...this.store.expenses];
+    if (month) {
+      list = list.filter(e => `${e.date.getFullYear()}-${String(e.date.getMonth()+1).padStart(2,'0')}` === month);
+    }
+    return list.sort((a,b)=> b.date.getTime()-a.date.getTime());
+  }
+  async deleteExpense(id: string): Promise<void> {
+    this.store.expenses = this.store.expenses.filter((e) => e.id !== id);
+    saveStore(this.store);
   }
 }

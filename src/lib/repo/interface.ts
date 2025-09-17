@@ -6,6 +6,7 @@ import {
   Liability,
   NetWorthSnapshot,
   PortfolioStats,
+  Expense,
 } from '@/lib/types';
 
 export interface Repo {
@@ -56,4 +57,10 @@ export interface Repo {
 
   // portfolio statistics
   getPortfolioStats(startDate?: Date, endDate?: Date): Promise<PortfolioStats>;
+
+  // expenses (budget)
+  saveExpense(expense: Expense): Promise<void>;
+  getExpense(id: string): Promise<Expense | null>;
+  listExpenses(month?: string): Promise<Expense[]>; // month: 'YYYY-MM'
+  deleteExpense(id: string): Promise<void>;
 }

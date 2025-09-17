@@ -90,3 +90,15 @@ export interface PortfolioStats {
     return: number;
   }>;
 }
+
+export interface Expense {
+  id: string;
+  date: Date; // transaction date
+  description: string;
+  amount: number;
+  currency: string; // e.g. SGD, USD
+  category: string; // e.g. Food, Transport, Bills
+  paymentMethod?: string; // e.g. Card, Cash
+  status?: 'to_submit' | 'to_verify' | 'cleared' | 'rejected';
+  createdAt: Date;
+}
