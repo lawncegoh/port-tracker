@@ -107,10 +107,8 @@ export default function BrokeragePage() {
     setForm({ symbol: '', quantity: '', costBasis: '', account: 'MAIN', customAccount: '' });
   };
 
-  const totalMarketValue = positions.reduce(
-    (sum: number, p: Position) => sum + p.marketValue,
-    0
-  );
+  // Stored MV totals
+  const totalMarketValue = positions.reduce((sum: number, p: Position) => sum + p.marketValue, 0);
   const marginLoan = Number(settings?.marginLoan || 0);
   const netLiq = totalMarketValue - marginLoan;
 
@@ -124,12 +122,8 @@ export default function BrokeragePage() {
       return res.json();
     }
   });
-  const netLiqSGD = useMemo(() => {
-    const fx = Number(usdsgdQuote?.price || 0);
-    return fx > 0 ? netLiq * fx : null;
-  }, [usdsgdQuote?.price, netLiq]);
-
   // Live quotes for symbols to show beside P&L
+
   const symbols = useMemo(() => Array.from(new Set(positions.map(p => p.symbol))).filter(Boolean), [positions]);
   const quoteQueries = useQueries({
     queries: symbols.map((s) => ({
@@ -151,6 +145,20 @@ export default function BrokeragePage() {
     return m;
   }, [quoteQueries, symbols]);
 
+  // Live MV totals (fallback to stored MV when quote missing)
+  const totalLiveMarketValue = useMemo(() => {
+    return positions.reduce((sum, p) => {
+      const q = quoteMap.get(p.symbol)?.price;
+      const liveMV = (q != null && !isNaN(q)) ? (q * p.quantity) : p.marketValue;
+      return sum + liveMV;
+    }, 0);
+  }, [positions, quoteMap]);
+  const netLiqLive = totalLiveMarketValue - marginLoan;
+  const netLiqSGD = useMemo(() => {
+    const fx = Number(usdsgdQuote?.price || 0);
+    return fx > 0 ? netLiqLive * fx : null;
+  }, [usdsgdQuote?.price, netLiqLive]);
+
   // Derive commonly used accounts for dropdown
   const accountOptions = useMemo(() => {
     const set = new Set<string>(['MAIN']);
@@ -164,9 +172,9 @@ export default function BrokeragePage() {
 
       <main className="container mx-auto px-4 py-8 space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <MetricCard title="Total Market Value (USD)" value={`$${totalMarketValue.toLocaleString()}`} subtitle="Brokerage positions" />
+          <MetricCard title="Total Market Value (USD)" value={`$${totalLiveMarketValue.toLocaleString()}`} subtitle="Live quotes (fallback to stored)" />
           <MetricCard title="Margin / Loan (USD)" value={`$${marginLoan.toLocaleString()}`} subtitle="Borrowed amount" />
-          <MetricCard title="Net Liq Value (USD)" value={`$${netLiq.toLocaleString()}`} subtitle="Market - Margin" />
+          <MetricCard title="Net Liq Value (USD)" value={`$${netLiqLive.toLocaleString()}`} subtitle="Live MV - Margin" />
         </div>
         {netLiqSGD !== null && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -227,16 +235,26 @@ export default function BrokeragePage() {
                     <TableCell>${p.costBasis.toFixed(2)}</TableCell>
                     <TableCell>${(p.costBasis / p.quantity).toFixed(4)}</TableCell>
                     <TableCell>
-                      ${p.marketValue.toFixed(2)}
+                      {(() => {
+                        const q = quoteMap.get(p.symbol)?.price;
+                        const liveMV = (q != null && !isNaN(q)) ? q * p.quantity : p.marketValue;
+                        return `$${liveMV.toFixed(2)}`;
+                      })()}
+                      <div className="text-xs text-muted-foreground">Stored: ${p.marketValue.toFixed(2)}</div>
                     </TableCell>
-                    <TableCell className={p.unrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}>
-                      ${p.unrealizedPnL.toFixed(2)}
+                    <TableCell>
+                      {(() => {
+                        const q = quoteMap.get(p.symbol)?.price;
+                        const liveMV = (q != null && !isNaN(q)) ? q * p.quantity : p.marketValue;
+                        const livePnL = liveMV - p.costBasis;
+                        const cls = livePnL >= 0 ? 'text-green-600' : 'text-red-600';
+                        return <span className={cls}>${livePnL.toFixed(2)}</span>;
+                      })()}
                       <div className="text-xs text-muted-foreground">
                         {(() => {
                           const q = quoteMap.get(p.symbol);
                           if (!q) return 'Live: …';
-                          const liveMV = q.price * p.quantity;
-                          return `Live MV: $${liveMV.toFixed(2)} (@ $${q.price.toFixed(2)})`;
+                          return `@ $${q.price.toFixed(2)}`;
                         })()}
                       </div>
                     </TableCell>

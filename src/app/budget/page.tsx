@@ -16,6 +16,11 @@ function ym(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
+function ymd(date: Date = new Date()) {
+  // Local timezone YYYY-MM-DD for input[type=date]
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+}
+
 export default function BudgetPage() {
   const queryClient = useQueryClient();
   const [month, setMonth] = useState<string>(() => ym(new Date()));
@@ -25,6 +30,15 @@ export default function BudgetPage() {
     queryFn: async () => {
       const repo = await getRepo();
       return await repo.listExpenses(month);
+    }
+  });
+
+  // Fetch all expenses for month-on-month visualization
+  const { data: allExpenses = [] } = useQuery({
+    queryKey: ['expenses', 'all'],
+    queryFn: async () => {
+      const repo = await getRepo();
+      return await repo.listExpenses();
     }
   });
 
@@ -44,25 +58,36 @@ export default function BudgetPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['expenses', month] })
   });
 
+  // Category filter state for expenses table
+  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
+  const toggleCategoryFilter = (cat: string) => {
+    setCategoryFilter((prev) => prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]);
+  };
+  const clearCategoryFilter = () => setCategoryFilter([]);
+
   const [form, setForm] = useState({
-    date: new Date().toISOString().slice(0,10),
+    date: ymd(),
     description: '',
     amount: '',
     currency: 'SGD',
     category: 'General',
     paymentMethod: 'Card',
+    recurringMonthly: false,
   });
+  // previously used for future-date validation; no longer needed
 
   // Inline edit state
   const [editId, setEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
-    date: new Date().toISOString().slice(0,10),
+    date: ymd(),
     description: '',
     amount: '',
     currency: 'SGD',
     category: 'General',
     paymentMethod: 'Card',
+    recurringMonthly: false,
   });
+  // no edit error state needed now
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,11 +101,12 @@ export default function BudgetPage() {
       currency: form.currency || 'SGD',
       category: form.category || 'General',
       paymentMethod: form.paymentMethod,
+      recurringMonthly: form.recurringMonthly || undefined,
       status: 'cleared',
       createdAt: new Date()
     };
     saveMutation.mutate(exp);
-    setForm({ date: new Date().toISOString().slice(0,10), description: '', amount: '', currency: 'SGD', category: 'General', paymentMethod: 'Card' });
+    setForm({ date: ymd(), description: '', amount: '', currency: 'SGD', category: 'General', paymentMethod: 'Card', recurringMonthly: false });
   };
 
   const summary = useMemo(() => {
@@ -93,6 +119,12 @@ export default function BudgetPage() {
     return { total, count, topCat, topVal, totalsByCat };
   }, [expenses]);
 
+  const filteredExpenses = useMemo(() => {
+    if (!categoryFilter.length) return expenses;
+    const set = new Set(categoryFilter);
+    return expenses.filter(e => set.has(e.category));
+  }, [expenses, categoryFilter]);
+
   // Month options: last 24 months including current
   const months = useMemo(() => {
     const out: string[] = [];
@@ -103,6 +135,52 @@ export default function BudgetPage() {
     }
     return out; // already descending
   }, []);
+
+  // MoM stacked columns per category
+  // Build a stable category order from the last 12 months of expenses,
+  // not just the currently selected month (prevents empty stacks when the
+  // current month has no spend).
+  const catOrder = useMemo(() => {
+    // Prefer the current month's category order to match the left legend colors
+    const currentEntries = Array.from(summary.totalsByCat.entries());
+    if (currentEntries.length > 0) {
+      return currentEntries.sort((a,b)=> b[1]-a[1]).map(([c])=>c);
+    }
+    // Otherwise, derive from the last 12 months so MoM isn't empty
+    const last12 = months.slice(0, 12); // most recent first
+    const totals = new Map<string, number>();
+    for (const e of allExpenses) {
+      const key = ym(new Date(e.date));
+      if (!last12.includes(key)) continue;
+      totals.set(e.category, (totals.get(e.category) || 0) + e.amount);
+    }
+    return Array.from(totals.entries()).sort((a,b)=> b[1]-a[1]).map(([c])=>c);
+  }, [summary, allExpenses, months]);
+  const catColors = ['#2563eb','#16a34a','#f59e0b','#ef4444','#8b5cf6','#0ea5e9','#22c55e','#eab308','#f97316','#06b6d4'];
+  const colorMap = useMemo(() => {
+    const m = new Map<string, string>();
+    catOrder.forEach((c, i) => m.set(c, catColors[i % catColors.length]));
+    return m;
+  }, [catOrder]);
+
+  const momCatData = useMemo(() => {
+    const last12 = months.slice(0, 12).reverse(); // chronological
+    const out = last12.map((m) => {
+      const monthTotals = new Map<string, number>();
+      for (const c of catOrder) monthTotals.set(c, 0);
+      for (const e of allExpenses) {
+        const key = ym(new Date(e.date));
+        if (key !== m) continue;
+        if (!monthTotals.has(e.category)) monthTotals.set(e.category, 0);
+        monthTotals.set(e.category, (monthTotals.get(e.category) || 0) + e.amount);
+      }
+      const total = Array.from(monthTotals.values()).reduce((s,v)=>s+v,0);
+      return { month: m, total, byCat: monthTotals } as { month: string; total: number; byCat: Map<string, number> };
+    });
+    return out;
+  }, [allExpenses, months, catOrder]);
+
+  const momMax = useMemo(() => (momCatData.reduce((mx, d) => Math.max(mx, d.total), 0) || 1), [momCatData]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -126,93 +204,164 @@ export default function BudgetPage() {
           <MetricCard title="Top Category" value={summary.topCat || '—'} subtitle={`$${summary.topVal.toFixed(2)}`} />
         </div>
 
-        {/* Stacked bars: category split overall and by payment method */}
-        <TableWrapper title="Category Split (Stacked Bars)">
-          {summary.total > 0 ? (
-            <div className="space-y-6">
-              {/* Overall */}
-              {(() => {
-                const entries = Array.from(summary.totalsByCat.entries()).sort((a,b)=> b[1]-a[1]);
-                const colors = [
-                  '#2563eb','#16a34a','#f59e0b','#ef4444','#8b5cf6','#0ea5e9','#22c55e','#eab308','#f97316','#06b6d4'
-                ];
-                const total = summary.total || 1;
-                return (
-                  <div>
-                    <div className="mb-2 text-sm text-muted-foreground">Overall</div>
-                    <div className="w-full h-6 rounded-md overflow-hidden flex border">
-                      {entries.map(([cat, amt], i) => (
-                        <div key={cat} title={`${cat}: $${amt.toFixed(2)}`}
-                             style={{ width: `${(amt/total)*100}%`, backgroundColor: colors[i % colors.length] }} />
-                      ))}
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-3 text-sm">
-                      {entries.map(([cat, amt], i) => (
-                        <div key={cat} className="flex items-center gap-2">
-                          <span className="inline-block w-3 h-3 rounded-sm" style={{backgroundColor: colors[i % colors.length]}}></span>
-                          <span className="text-muted-foreground">{cat}</span>
-                          <span>${amt.toFixed(0)}</span>
+        {/* Left/Right split: left = category visuals, right = MoM chart */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-6">
+            {/* Stacked bars: category split */}
+            <TableWrapper title="Category Split (Stacked Bars)">
+              {summary.total > 0 ? (
+                <div className="space-y-6">
+                  {(() => {
+                    const entries = Array.from(summary.totalsByCat.entries()).sort((a,b)=> b[1]-a[1]);
+                    const colors = [
+                      '#2563eb','#16a34a','#f59e0b','#ef4444','#8b5cf6','#0ea5e9','#22c55e','#eab308','#f97316','#06b6d4'
+                    ];
+                    const total = summary.total || 1;
+                    return (
+                      <div>
+                        <div className="mb-2 text-sm text-muted-foreground">Overall</div>
+                        <div className="w-full h-6 rounded-md overflow-hidden flex border">
+                          {entries.map(([cat, amt], i) => (
+                            <div key={cat} title={`${cat}: $${amt.toFixed(2)}`}
+                                 style={{ width: `${(amt/total)*100}%`, backgroundColor: colors[i % colors.length] }} />
+                          ))}
                         </div>
+                        <div className="mt-2 flex flex-wrap gap-3 text-sm">
+                          {entries.map(([cat, amt], i) => (
+                            <div key={cat} className="flex items-center gap-2">
+                              <span className="inline-block w-3 h-3 rounded-sm" style={{backgroundColor: colors[i % colors.length]}}></span>
+                              <span className="text-muted-foreground">{cat}</span>
+                              <span>${amt.toFixed(0)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">No spending to visualize for {month}.</div>
+              )}
+            </TableWrapper>
+
+            {/* Category breakdown */}
+            <TableWrapper title="By Category">
+              {summary.totalsByCat && summary.totalsByCat.size > 0 ? (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Category</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {Array.from(summary.totalsByCat.entries()).sort((a,b)=> b[1]-a[1]).map(([cat,amt]) => (
+                        <TableRow key={cat}>
+                          <TableCell className="font-medium">{cat}</TableCell>
+                          <TableCell className="text-right">${amt.toFixed(2)}</TableCell>
+                        </TableRow>
                       ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">No spend by category yet.</div>
+              )}
+            </TableWrapper>
+          </div>
+
+          {/* Right: Month-on-Month stacked columns (by category) */}
+          <div>
+            <TableWrapper title="Month-on-Month Total Spend">
+              {momCatData.length > 0 ? (
+                <div className="w-full">
+                  <div className="flex gap-2 border rounded-md p-3">
+                    {/* Y axis */}
+                    <div className="flex flex-col justify-between text-[10px] w-14 pr-1 text-muted-foreground">
+                      {Array.from({length:5}).map((_,i)=>{
+                        const val = Math.round(momMax * (1 - i/4));
+                        return <div key={i}>${val.toLocaleString()}</div>;
+                      })}
+                    </div>
+                    {/* Bars with grid lines */}
+                    <div className="relative flex-1">
+                      <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                        {Array.from({length:5}).map((_,i)=>(
+                          <div key={i} className="border-t border-border/30"></div>
+                        ))}
+                      </div>
+                      <div className="relative h-64 md:h-72 w-full grid grid-cols-12 items-end gap-2 px-1">
+                        {momCatData.map((d, i) => (
+                          <div key={i} className="flex flex-col items-center gap-1">
+                            <div className="w-full flex flex-col justify-end" style={{ height: '100%' }}>
+                              {catOrder.map((c) => {
+                                const amt = d.byCat.get(c) || 0;
+                                if (amt <= 0) return null;
+                                const h = (amt / momMax) * 100;
+                                return <div key={c} style={{ height: `${h}%`, backgroundColor: colorMap.get(c) }} />;
+                              })}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground whitespace-nowrap">{d.month.slice(2)}</div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                );
-              })()}
-
-              {/* Removed per-payment-method stacked bars per request */}
-            </div>
-          ) : (
-            <div className="text-center py-6 text-muted-foreground">No spending to visualize for {month}.</div>
-          )}
-        </TableWrapper>
-
-        {/* Category breakdown */}
-        <TableWrapper title="By Category">
-          {summary.totalsByCat && summary.totalsByCat.size > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Category</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {Array.from(summary.totalsByCat.entries()).sort((a,b)=> b[1]-a[1]).map(([cat,amt]) => (
-                    <TableRow key={cat}>
-                      <TableCell className="font-medium">{cat}</TableCell>
-                      <TableCell className="text-right">${amt.toFixed(2)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="text-center py-6 text-muted-foreground">No spend by category yet.</div>
-          )}
-        </TableWrapper>
+                </div>
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">No month-on-month data yet.</div>
+              )}
+            </TableWrapper>
+          </div>
+        </div>
 
         {/* Add expense */}
-        <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-6 gap-3 items-start">
-          <Input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
-          <Input placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
-          <Input placeholder="Amount" type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} />
-          <Input placeholder="Currency" value={form.currency} onChange={e => setForm({ ...form, currency: e.target.value.toUpperCase() })} />
-          <select className="border rounded-md px-2 py-2 h-9" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
-            {['General','Food','Transport','Groceries','Bills','Mortgage','Entertainment','Travel','Health','Shopping','Other'].map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <div className="flex gap-2">
+        <div className="w-full overflow-x-auto">
+        <form onSubmit={handleAdd} className="space-y-3 mb-3">
+          <div className="grid grid-cols-1 md:grid-cols-6 lg:grid-cols-6 gap-3 items-start">
+            <Input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
+            <Input placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
+            <Input placeholder="Amount" type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} />
+            <Input placeholder="Currency" value={form.currency} onChange={e => setForm({ ...form, currency: e.target.value.toUpperCase() })} />
+            <select className="border rounded-md px-2 py-2 h-9" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
+              {['General','Food','Transport','Groceries','Bills','Mortgage','Entertainment','Travel','Health','Shopping','Other'].map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
             <select className="border rounded-md px-2 py-2 h-9" value={form.paymentMethod} onChange={e => setForm({ ...form, paymentMethod: e.target.value })}>
               {['Card','PayLah','Vouchers'].map(p => <option key={p} value={p}>{p}</option>)}
             </select>
-            <Button type="submit" className="whitespace-nowrap">Add Expense</Button>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+              <input type="checkbox" checked={form.recurringMonthly} onChange={e => setForm({ ...form, recurringMonthly: e.target.checked })} />
+              Recurring monthly
+            </label>
+            <Button type="submit" className="whitespace-nowrap shrink-0 min-w-[120px]">Add Expense</Button>
           </div>
         </form>
+        </div>
 
         {/* Expenses list */}
         <TableWrapper title="Expenses">
-          {expenses.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">No expenses yet for {month}.</div>
+          {/* Category filter controls */}
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <Button
+              variant={categoryFilter.length === 0 ? 'default' : 'outline'}
+              size="sm"
+              onClick={clearCategoryFilter}
+            >All</Button>
+            {Array.from(summary.totalsByCat.keys()).sort().map((cat) => {
+              const active = categoryFilter.includes(cat);
+              return (
+                <Button key={cat} variant={active ? 'default' : 'outline'} size="sm" onClick={() => toggleCategoryFilter(cat)}>
+                  {cat}
+                </Button>
+              );
+            })}
+          </div>
+
+          {filteredExpenses.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No expenses yet for {month}{categoryFilter.length ? ' (filtered)' : ''}.</div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -227,7 +376,7 @@ export default function BudgetPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {expenses.map((e) => {
+                  {filteredExpenses.map((e) => {
                     const isEditing = editId === e.id;
                     return (
                       <TableRow key={e.id}>
@@ -266,9 +415,15 @@ export default function BudgetPage() {
                         </TableCell>
                         <TableCell>
                           {isEditing ? (
-                            <select className="border rounded-md px-2 py-2 h-9" value={editForm.paymentMethod} onChange={ev => setEditForm({ ...editForm, paymentMethod: ev.target.value })}>
-                              {['Card','PayLah','Vouchers'].map(p => <option key={p} value={p}>{p}</option>)}
-                            </select>
+                            <div className="flex items-center gap-3">
+                              <select className="border rounded-md px-2 py-2 h-9" value={editForm.paymentMethod} onChange={ev => setEditForm({ ...editForm, paymentMethod: ev.target.value })}>
+                                {['Card','PayLah','Vouchers'].map(p => <option key={p} value={p}>{p}</option>)}
+                              </select>
+                              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <input type="checkbox" checked={editForm.recurringMonthly} onChange={ev => setEditForm({ ...editForm, recurringMonthly: ev.target.checked })} />
+                                Recurring monthly
+                              </label>
+                            </div>
                           ) : (
                             e.paymentMethod || '—'
                           )}
@@ -289,6 +444,7 @@ export default function BudgetPage() {
                                     currency: editForm.currency,
                                     category: editForm.category,
                                     paymentMethod: editForm.paymentMethod,
+                                    recurringMonthly: editForm.recurringMonthly || undefined,
                                   };
                                   const newMonth = ym(new Date(editForm.date));
                                   saveMutation.mutate(updated, {
@@ -311,12 +467,13 @@ export default function BudgetPage() {
                                 onClick={() => {
                                   setEditId(e.id);
                                   setEditForm({
-                                    date: new Date(e.date).toISOString().slice(0,10),
+                                    date: ymd(new Date(e.date)),
                                     description: e.description,
                                     amount: String(e.amount),
                                     currency: e.currency,
                                     category: e.category,
                                     paymentMethod: e.paymentMethod || 'Card',
+                                    recurringMonthly: e.recurringMonthly || false,
                                   });
                                 }}
                               >Edit</Button>
@@ -329,8 +486,8 @@ export default function BudgetPage() {
                       </TableRow>
                     );
                   })}
-                </TableBody>
-              </Table>
+              </TableBody>
+            </Table>
             </div>
           )}
         </TableWrapper>

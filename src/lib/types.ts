@@ -100,5 +100,8 @@ export interface Expense {
   category: string; // e.g. Food, Transport, Bills
   paymentMethod?: string; // e.g. Card, Cash
   status?: 'to_submit' | 'to_verify' | 'cleared' | 'rejected';
+  // When true, this expense is intended to recur monthly.
+  // Used primarily for UI validation (allow future-dated entries only when recurring).
+  recurringMonthly?: boolean;
   createdAt: Date;
 }

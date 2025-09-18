@@ -3,15 +3,10 @@
 import { Navigation } from "@/components/navigation";
 import { MetricCard } from "@/components/ui/metric-card";
 import { ChartCard } from "@/components/ui/chart-card";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { getClientRepo as getRepo } from "@/lib/repo/client";
-import {
-  Position,
-  RealEstateProperty,
-  OtherAsset,
-  Liability,
-} from "@/lib/types";
+import { Position, RealEstateProperty, Expense } from "@/lib/types";
+import { useState, useMemo } from "react";
 
 export default function Dashboard() {
   // Fetch portfolio data
@@ -31,19 +26,14 @@ export default function Dashboard() {
     }
   });
 
-  const { data: assets = [] } = useQuery<OtherAsset[]>({
-    queryKey: ['assets'],
+  // Budget month + expenses for category split
+  function ym(d: Date) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+  const [budgetMonth, setBudgetMonth] = useState<string>(() => ym(new Date()));
+  const { data: expenses = [] } = useQuery<Expense[]>({
+    queryKey: ['expenses', budgetMonth],
     queryFn: async () => {
       const repo = await getRepo();
-      return await repo.listAssets();
-    }
-  });
-
-  const { data: liabilities = [] } = useQuery<Liability[]>({
-    queryKey: ['liabilities'],
-    queryFn: async () => {
-      const repo = await getRepo();
-      return await repo.listLiabilities();
+      return await repo.listExpenses(budgetMonth);
     }
   });
 
@@ -80,17 +70,17 @@ export default function Dashboard() {
       sum + (prop.currentValue - prop.loanPrincipal),
     0
   );
-  const totalOtherAssets = assets.reduce(
-    (sum: number, asset: OtherAsset) => sum + asset.value,
-    0
-  );
-  const totalLiabilities = liabilities.reduce(
-    (sum: number, liab: Liability) => sum + liab.balance,
-    0
-  );
-  
-  // Total Net Worth uses Net Liq (SGD) for brokerage portion
-  const totalNetWorth = netLiqSGD + totalRealEstateEquity + totalOtherAssets - totalLiabilities;
+  // Net worth focuses on brokerage net liq (SGD) + real estate equity
+  const totalNetWorth = netLiqSGD + totalRealEstateEquity;
+
+  // Budget category split data
+  const catSplit = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const e of expenses) map.set(e.category, (map.get(e.category)||0)+e.amount);
+    const total = Array.from(map.values()).reduce((s,v)=>s+v,0);
+    const entries = Array.from(map.entries()).sort((a,b)=> b[1]-a[1]);
+    return { total, entries };
+  }, [expenses]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -103,7 +93,7 @@ export default function Dashboard() {
             <MetricCard
               title="Total Net Worth"
               value={totalNetWorth > 0 ? `S$${totalNetWorth.toLocaleString()}` : "Add data to view"}
-              subtitle={totalNetWorth > 0 ? "As of today" : "Add positions and assets"}
+              subtitle={totalNetWorth > 0 ? "As of today" : "Add positions and properties"}
             />
             <MetricCard
               title="Portfolio (Net Liq, SGD)"
@@ -117,54 +107,69 @@ export default function Dashboard() {
             />
           </div>
 
-          {/* Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ChartCard title="Asset Allocation">
-              <div className="h-64 flex items-center justify-center text-muted-foreground">
-                {netLiqSGD > 0 || totalRealEstateEquity > 0 || totalOtherAssets > 0 ? (
-                  <div className="text-center">
-                    <p>Portfolio (NLV, SGD): S${netLiqSGD.toLocaleString()}</p>
-                    <p>Real Estate: ${totalRealEstateEquity.toLocaleString()}</p>
-                    <p>Other Assets: ${totalOtherAssets.toLocaleString()}</p>
-                  </div>
-                ) : (
-                  <p>Add assets to view allocation</p>
-                )}
-              </div>
-            </ChartCard>
-            
-            <ChartCard title="Liabilities Breakdown">
-              <div className="h-64 flex items-center justify-center text-muted-foreground">
-                {totalLiabilities > 0 ? (
-                  <div className="text-center">
-                    <p>Total Liabilities: ${totalLiabilities.toLocaleString()}</p>
-                    <p>Net Worth: S${totalNetWorth.toLocaleString()}</p>
-                  </div>
-                ) : (
-                  <p>Add liabilities to view breakdown</p>
-                )}
-              </div>
-            </ChartCard>
-          </div>
+          {/* Budget Category Split (Pie) */}
+          <ChartCard title="Budget: Category Split">
+            <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+              {/* Pie or placeholder */}
+              {catSplit.total > 0 ? (
+                (() => {
+                  const size = 180; const r = 80; const cx = size/2; const cy = size/2;
+                  const circumference = 2 * Math.PI * r;
+                  const colors = ['#2563eb','#16a34a','#f59e0b','#ef4444','#8b5cf6','#0ea5e9','#22c55e','#eab308','#f97316','#06b6d4'];
+                  let offset = 0;
+                  return (
+                    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="rotate-[-90deg]">
+                      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e5e7eb" strokeWidth={20} />
+                      {catSplit.entries.map(([cat, amt], i) => {
+                        const frac = amt / catSplit.total;
+                        const len = frac * circumference;
+                        const dashArray = `${len} ${circumference - len}`;
+                        const circle = (
+                          <circle key={cat}
+                            cx={cx} cy={cy} r={r}
+                            fill="none"
+                            stroke={colors[i % colors.length]}
+                            strokeWidth={20}
+                            strokeDasharray={dashArray}
+                            strokeDashoffset={-offset}
+                          />
+                        );
+                        offset += len; return circle;
+                      })}
+                    </svg>
+                  );
+                })()
+              ) : (
+                <div className="h-44 w-full flex items-center justify-center text-muted-foreground">No spending data</div>
+              )}
 
-          {/* Performance Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <MetricCard
-              title="YTD Return"
-              value={"Calculate from trades"}
-              subtitle="Portfolio performance"
-            />
-            <MetricCard
-              title="Volatility"
-              value={"Calculate from trades"}
-              subtitle="Annualized"
-            />
-            <MetricCard
-              title="Max Drawdown"
-              value={"Calculate from trades"}
-              subtitle="Peak to trough"
-            />
-          </div>
+              {/* Legend and controls (always visible) */}
+              <div className="flex-1 w-full">
+                <div className="flex items-center gap-2 mb-3">
+                  <label className="text-sm">Month</label>
+                  <select className="border rounded-md px-2 py-2 h-9" value={budgetMonth} onChange={e => setBudgetMonth(e.target.value)}>
+                    {Array.from({length:12}).map((_,i)=>{
+                      const d = new Date(); d.setMonth(d.getMonth()-i); const m = ym(d);
+                      return <option key={m} value={m}>{m}</option>;
+                    })}
+                  </select>
+                </div>
+                {catSplit.total > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                    {catSplit.entries.map(([cat, amt], i) => (
+                      <div key={cat} className="flex items-center gap-2">
+                        <span className="inline-block w-3 h-3 rounded-sm" style={{backgroundColor: ['#2563eb','#16a34a','#f59e0b','#ef4444','#8b5cf6','#0ea5e9','#22c55e','#eab308','#f97316','#06b6d4'][i % 10]}}></span>
+                        <span className="text-muted-foreground">{cat}</span>
+                        <span>${amt.toFixed(0)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </ChartCard>
+
+          {/* Removed performance metrics per request */}
         </div>
       </main>
     </div>
