@@ -11,10 +11,21 @@ import {
 } from '@/lib/types';
 
 async function http<T>(url: string, init?: RequestInit): Promise<T> {
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(init?.headers instanceof Headers
+      ? Object.fromEntries(init.headers.entries())
+      : (init?.headers as Record<string, string> | undefined)),
+  } as Record<string, string>;
+
   const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     ...init,
+    headers,
   });
+  if (res.status === 401) {
+    throw new Error('Unauthorized');
+  }
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   if (res.status === 204) return undefined as unknown as T;
   return res.json();
