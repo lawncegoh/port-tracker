@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerRepo as getRepo } from '@/lib/repo/server';
+import { getServerRepo as getRepo, UnauthorizedError } from '@/lib/repo/server';
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,8 +22,11 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (error) {
+    if (error instanceof UnauthorizedError) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     console.error('Error fetching portfolio stats:', error);
-    
+
     return NextResponse.json({
       error: 'Failed to fetch portfolio stats',
       message: error instanceof Error ? error.message : 'Unknown error',

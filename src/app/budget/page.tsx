@@ -12,6 +12,8 @@ import { getClientRepo as getRepo } from "@/lib/repo/client";
 import { Expense } from "@/lib/types";
 import { Trash2 } from "lucide-react";
 
+const CATEGORY_COLORS = ['#2563eb','#16a34a','#f59e0b','#ef4444','#8b5cf6','#0ea5e9','#22c55e','#eab308','#f97316','#06b6d4'];
+
 function ym(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
@@ -156,10 +158,9 @@ export default function BudgetPage() {
     }
     return Array.from(totals.entries()).sort((a,b)=> b[1]-a[1]).map(([c])=>c);
   }, [summary, allExpenses, months]);
-  const catColors = ['#2563eb','#16a34a','#f59e0b','#ef4444','#8b5cf6','#0ea5e9','#22c55e','#eab308','#f97316','#06b6d4'];
   const colorMap = useMemo(() => {
     const m = new Map<string, string>();
-    catOrder.forEach((c, i) => m.set(c, catColors[i % catColors.length]));
+    catOrder.forEach((c, i) => m.set(c, CATEGORY_COLORS[i % CATEGORY_COLORS.length]));
     return m;
   }, [catOrder]);
 
@@ -454,7 +455,7 @@ export default function BudgetPage() {
                                       if (newMonth !== month) queryClient.invalidateQueries({ queryKey: ['expenses', newMonth] });
                                       setEditId(null);
                                     }
-                                  } as any);
+                                  });
                                 }}
                               >Save</Button>
                               <Button variant="outline" size="sm" onClick={() => setEditId(null)}>Cancel</Button>

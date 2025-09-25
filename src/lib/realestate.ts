@@ -1,5 +1,3 @@
-import { RealEstateProperty } from '@/lib/types';
-
 export type RatePeriod = { start: Date; rate: number };
 export type Stage = { name: string; percent: number; date?: Date | null };
 

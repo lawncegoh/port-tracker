@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
 
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), 5000);
-  let lastError: any = null;
+  let lastError: unknown = null;
 
   try {
     for (const url of urls) {
@@ -87,8 +87,9 @@ export async function GET(req: NextRequest) {
     }
     clearTimeout(id);
     return NextResponse.json({ error: 'not found or unreachable', detail: String(lastError) }, { status: 502 });
-  } catch (e: any) {
+  } catch (error) {
     clearTimeout(id);
-    return NextResponse.json({ error: e?.message || 'fetch error' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'fetch error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

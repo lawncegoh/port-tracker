@@ -4,65 +4,65 @@ A portfolio tracking application supporting manual entry for brokerage positions
 
 ## Features
 
+- **Secure authentication**: Email/password accounts with session-based access control
 - **Dashboard**: Overview of total net worth, asset allocation, and performance metrics
 - **Brokerage Tab**: Track positions, trades, and portfolio statistics
 - **Real Estate Tab**: Manage properties, loans, and equity calculations
 - **Others Tab**: Track other assets (cash, crypto, private investments) and liabilities
-- **Data Persistence**: Configurable storage (in-memory or SQLite)
+- **Per-user data storage**: Prisma + SQLite database keeps each user's entries separate
 
 ## Tech Stack
 
-- **Frontend**: Next.js 14 with App Router, TypeScript, Tailwind CSS
+- **Frontend**: Next.js 15 with App Router, TypeScript, Tailwind CSS
 - **UI Components**: shadcn/ui with dark mode
 - **State Management**: Zustand + React Query
 - **Charts**: Recharts (ready for implementation)
-- **Database**: Prisma + SQLite (configurable)
+- **Database**: Prisma + SQLite (persistent) or in-memory (ephemeral/testing)
 - **Styling**: Tailwind CSS with custom design system
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+ 
-- pnpm (recommended) or npm
+- Node.js 18+
+- npm (bundled with Node) or pnpm/yarn if you prefer
 
 ### Installation
 
 1. Clone the repository:
-```bash
-git clone <repository-url>
-cd port-tracker
-```
+   ```bash
+   git clone <repository-url>
+   cd port-tracker
+   ```
 
 2. Install dependencies:
-```bash
-pnpm install
-```
+   ```bash
+   npm install
+   ```
 
-3. Set up environment variables:
-```bash
-# Create .env.local file
-cp .env.example .env.local
+3. Configure environment variables (an example `.env` is provided for local development):
+   ```bash
+   cp .env .env.local
+   # adjust NEXTAUTH_SECRET or DATABASE_URL if required
+   ```
 
-# Configure data store (memory or sqlite)
-DATA_STORE=memory
-```
+4. Apply database migrations (creates the SQLite database at `prisma/dev.db`):
+   ```bash
+   npx prisma migrate dev
+   ```
 
-4. Start the development server:
-```bash
-pnpm dev
-```
+5. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+6. Open [http://localhost:3000](http://localhost:3000) in your browser. Create an account on the login page to begin tracking your data.
 
 ## Configuration
 
 ### Data Store
 
-The application supports two data storage modes:
-
-- **Memory** (`DATA_STORE=memory`): In-memory storage with sample data (default)
-- **SQLite** (`DATA_STORE=sqlite`): Persistent SQLite database (requires Prisma setup)
+The application defaults to Prisma + SQLite storage. For development or testing you can opt into an ephemeral in-memory store by setting `DATA_STORE=memory` before starting the dev server, but this mode does **not** support multi-user data separation.
 
 
 ## Project Structure
@@ -114,19 +114,19 @@ src/
 4. **UI Components**: Add pages and components
 5. **Navigation**: Update navigation if needed
 
-### Database Schema (Future)
+### Database Tooling
 
-When implementing SQLite:
+Useful Prisma commands:
 
 ```bash
-# Generate Prisma client
-pnpm prisma generate
+# Generate Prisma client (normally handled automatically during install)
+npx prisma generate
 
-# Run migrations
-pnpm prisma migrate dev
+# Apply new migrations in development
+npx prisma migrate dev
 
-# View database
-pnpm prisma studio
+# Inspect data locally
+npx prisma studio
 ```
 
 ## Deployment

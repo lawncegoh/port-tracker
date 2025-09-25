@@ -308,7 +308,7 @@ export default function RealEstatePage() {
               <label className="text-sm block mb-1">Tenor ({tenorUnit === 'years' ? 'years' : 'months'})</label>
               <div className="flex gap-2">
                 <Input placeholder={tenorUnit === 'years' ? 'e.g. 25' : 'e.g. 300'} type="number" value={tenorMonths} onChange={e => setTenorMonths(e.target.value)} />
-                <select className="border rounded-md px-2 py-2 h-9" value={tenorUnit} onChange={e => setTenorUnit(e.target.value as any)}>
+                <select className="border rounded-md px-2 py-2 h-9" value={tenorUnit} onChange={e => setTenorUnit(e.target.value as 'months' | 'years')}>
                   <option value="months">Months</option>
                   <option value="years">Years</option>
                 </select>
@@ -369,7 +369,7 @@ export default function RealEstatePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="text-sm block mb-1">CPF Input Mode</label>
-                <select className="border rounded-md px-2 py-2 h-9 w-full" value={cpfMode} onChange={e => setCpfMode(e.target.value as any)}>
+                <select className="border rounded-md px-2 py-2 h-9 w-full" value={cpfMode} onChange={e => setCpfMode(e.target.value as 'manual' | 'auto')}>
                   <option value="manual">Manual monthly OA amount</option>
                   <option value="auto">Auto from salary & age</option>
                 </select>

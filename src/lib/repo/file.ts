@@ -28,23 +28,20 @@ const DATA_FILE = path.join(DATA_DIR, 'store.json');
 
 function reviveDates<T>(obj: T): T {
   // Revive known date fields to Date objects
-  function revive(value: any): any {
-    if (!value) return value;
+  function revive(value: unknown): unknown {
+    if (value === null || value === undefined) return value;
     if (typeof value === 'string') {
       // attempt to parse ISO date strings
       const d = new Date(value);
-      if (!isNaN(d.getTime()) && /\d{4}-\d{2}-\d{2}T/.test(value)) {
+      if (!Number.isNaN(d.getTime()) && /\d{4}-\d{2}-\d{2}T/.test(value)) {
         return d;
       }
       return value;
     }
     if (Array.isArray(value)) return value.map((v) => revive(v));
     if (typeof value === 'object') {
-      const out: any = {};
-      for (const k of Object.keys(value)) {
-        out[k] = revive((value as any)[k]);
-      }
-      return out;
+      const record = value as Record<string, unknown>;
+      return Object.fromEntries(Object.entries(record).map(([key, val]) => [key, revive(val)]));
     }
     return value;
   }

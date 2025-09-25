@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerRepo as getRepo } from '@/lib/repo/server';
+import { NextResponse } from 'next/server';
+import { getServerRepo as getRepo, UnauthorizedError } from '@/lib/repo/server';
 import {
   Position,
   RealEstateProperty,
@@ -7,12 +7,8 @@ import {
   Liability,
 } from '@/lib/types';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
-    
     const repo = await getRepo();
     
     // Get all data sources
@@ -20,11 +16,6 @@ export async function GET(request: NextRequest) {
     const properties = await repo.listProperties();
     const assets = await repo.listAssets();
     const liabilities = await repo.listLiabilities();
-    const snapshots = await repo.listSnapshots(
-      startDate ? new Date(startDate) : undefined,
-      endDate ? new Date(endDate) : undefined
-    );
-    
     // Calculate current net worth
     const brokerageValue = positions.reduce(
       (sum: number, pos: Position) => sum + pos.marketValue,
@@ -94,8 +85,11 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(response);
   } catch (error) {
+    if (error instanceof UnauthorizedError) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     console.error('Error calculating net worth series:', error);
-    
+
     return NextResponse.json({
       error: 'Failed to calculate net worth series',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -104,7 +98,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     const repo = await getRepo();
     
@@ -154,8 +148,11 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
+    if (error instanceof UnauthorizedError) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     console.error('Error creating net worth snapshot:', error);
-    
+
     return NextResponse.json({
       error: 'Failed to create net worth snapshot',
       message: error instanceof Error ? error.message : 'Unknown error',
