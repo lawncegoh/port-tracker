@@ -108,9 +108,7 @@ export default function BrokeragePage() {
   };
 
   // Stored MV totals
-  const totalMarketValue = positions.reduce((sum: number, p: Position) => sum + p.marketValue, 0);
   const marginLoan = Number(settings?.marginLoan || 0);
-  const netLiq = totalMarketValue - marginLoan;
 
   // FX: USD/SGD to show Net Liq in SGD equivalent
   const { data: usdsgdQuote } = useQuery<{ symbol: string; price: number }>({

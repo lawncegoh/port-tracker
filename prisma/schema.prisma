@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String             @id @default(cuid())
+  email         String             @unique
+  name          String?
+  passwordHash  String
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  positions     Position[]
+  trades        Trade[]
+  properties    RealEstateProperty[]
+  assets        OtherAsset[]
+  liabilities   Liability[]
+  snapshots     NetWorthSnapshot[]
+  expenses      Expense[]
+  brokerage     BrokerageSetting?
+}
+
+model Position {
+  id           String   @id
+  symbol       String
+  quantity     Float
+  costBasis    Float
+  marketValue  Float
+  unrealizedPnL Float
+  realizedPnL  Float
+  account      String
+  lastUpdated  DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Trade {
+  id          String   @id
+  symbol      String
+  side        String
+  quantity    Float
+  price       Float
+  commission  Float
+  timestamp   DateTime
+  account     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model RealEstateProperty {
+  id                    String   @id
+  name                  String
+  purchasePrice         Float
+  downPayment           Float
+  loanPrincipal         Float
+  interestRate          Float
+  loanTerm              Float
+  currentValue          Float
+  monthlyPayment        Float
+  purchaseDate          DateTime
+  loanStartDate         DateTime?
+  loanTermMonths        Int?
+  rateSchedule          Json?
+  disbursementSchedule  Json?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model OtherAsset {
+  id          String   @id
+  name        String
+  type        String
+  value       Float
+  currency    String
+  lastUpdated DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Liability {
+  id             String   @id
+  name           String
+  type           String
+  balance        Float
+  interestRate   Float
+  monthlyPayment Float
+  dueDate        DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model NetWorthSnapshot {
+  id               String   @id
+  timestamp        DateTime
+  totalAssets      Float
+  totalLiabilities Float
+  netWorth         Float
+  breakdown        Json
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Expense {
+  id               String   @id
+  date             DateTime
+  description      String
+  amount           Float
+  currency         String
+  category         String
+  paymentMethod    String?
+  status           String?
+  recurringMonthly Boolean?
+  createdAt        DateTime
+  updatedAt        DateTime @updatedAt
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model BrokerageSetting {
+  id         String   @id @default(cuid())
+  marginLoan Float    @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
