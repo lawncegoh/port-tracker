@@ -10,7 +10,7 @@ import { useQuery, useMutation, useQueryClient, useQueries } from "@tanstack/rea
 import { useMemo, useState } from "react";
 import { getClientRepo as getRepo } from "@/lib/repo/client";
 import { Position } from "@/lib/types";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 
 export default function BrokeragePage() {
   const queryClient = useQueryClient();
@@ -54,6 +54,14 @@ export default function BrokeragePage() {
       await repo.deletePosition(id);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['positions'] })
+  });
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    symbol: '',
+    quantity: '',
+    avgCost: '',
+    account: 'MAIN',
   });
 
   const [form, setForm] = useState({
@@ -226,44 +234,165 @@ export default function BrokeragePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {positions.map((p: Position) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.symbol}</TableCell>
-                    <TableCell>{p.quantity}</TableCell>
-                    <TableCell>${p.costBasis.toFixed(2)}</TableCell>
-                    <TableCell>${(p.costBasis / p.quantity).toFixed(4)}</TableCell>
-                    <TableCell>
-                      {(() => {
-                        const q = quoteMap.get(p.symbol)?.price;
-                        const liveMV = (q != null && !isNaN(q)) ? q * p.quantity : p.marketValue;
-                        return `$${liveMV.toFixed(2)}`;
-                      })()}
-                      <div className="text-xs text-muted-foreground">Stored: ${p.marketValue.toFixed(2)}</div>
-                    </TableCell>
-                    <TableCell>
-                      {(() => {
-                        const q = quoteMap.get(p.symbol)?.price;
-                        const liveMV = (q != null && !isNaN(q)) ? q * p.quantity : p.marketValue;
-                        const livePnL = liveMV - p.costBasis;
-                        const cls = livePnL >= 0 ? 'text-green-600' : 'text-red-600';
-                        return <span className={cls}>${livePnL.toFixed(2)}</span>;
-                      })()}
-                      <div className="text-xs text-muted-foreground">
+                {positions.map((p: Position) => {
+                  const isEditing = editingId === p.id;
+                  const symbol = isEditing ? editForm.symbol : p.symbol;
+                  const quantity = isEditing ? Number(editForm.quantity || '0') : p.quantity;
+                  const avgCost = isEditing ? Number(editForm.avgCost || '0') : (p.costBasis / Math.max(p.quantity, 1));
+                  const costBasis = avgCost * quantity;
+                  const q = quoteMap.get(symbol)?.price;
+                  const liveMV = (q != null && !isNaN(q)) ? q * quantity : (isEditing ? p.marketValue * (quantity / Math.max(p.quantity, 1)) : p.marketValue);
+                  const livePnL = liveMV - costBasis;
+                  const avgCostDisp = quantity > 0 ? (costBasis / quantity) : 0;
+                  return (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-medium">
+                        {isEditing ? (
+                          <Input
+                            value={editForm.symbol}
+                            onChange={(e) => setEditForm({ ...editForm, symbol: e.target.value.toUpperCase() })}
+                          />
+                        ) : (
+                          p.symbol
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <Input
+                            type="number"
+                            value={editForm.quantity}
+                            onChange={(e) => setEditForm({ ...editForm, quantity: e.target.value })}
+                          />
+                        ) : (
+                          p.quantity
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {`$${costBasis.toFixed(2)}`}
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <Input
+                            type="number"
+                            value={editForm.avgCost}
+                            onChange={(e) => setEditForm({ ...editForm, avgCost: e.target.value })}
+                          />
+                        ) : (
+                          `$${avgCostDisp.toFixed(4)}`
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {`$${liveMV.toFixed(2)}`}
+                        <div className="text-xs text-muted-foreground">Stored: ${p.marketValue.toFixed(2)}</div>
+                      </TableCell>
+                      <TableCell>
                         {(() => {
-                          const q = quoteMap.get(p.symbol);
-                          if (!q) return 'Live: …';
-                          return `@ $${q.price.toFixed(2)}`;
+                          const cls = livePnL >= 0 ? 'text-green-600' : 'text-red-600';
+                          return <span className={cls}>${livePnL.toFixed(2)}</span>;
                         })()}
-                      </div>
-                    </TableCell>
-                    <TableCell>{p.account}</TableCell>
-                    <TableCell>
-                      <Button variant="destructive" size="sm" onClick={() => deleteMutation.mutate(p.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                        <div className="text-xs text-muted-foreground">
+                          {(() => {
+                            const qq = quoteMap.get(symbol);
+                            if (!qq) return 'Live: …';
+                            return `@ $${qq.price.toFixed(2)}`;
+                          })()}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <select
+                            className="border rounded-md px-2 py-2 w-full h-9"
+                            value={editForm.account}
+                            onChange={(e) => setEditForm({ ...editForm, account: e.target.value })}
+                          >
+                            {accountOptions.map((acc) => (
+                              <option key={acc} value={acc}>{acc}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          p.account
+                        )}
+                      </TableCell>
+                      <TableCell className="space-x-2">
+                        {isEditing ? (
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={async () => {
+                                // Validate
+                                const qty = Number(editForm.quantity);
+                                const ac = Number(editForm.avgCost);
+                                if (!editForm.symbol || isNaN(qty) || isNaN(ac)) return;
+                                // Try fetch latest quote; fallback prompt
+                                let marketPrice: number | null = null;
+                                try {
+                                  const res = await fetch(`/api/quote?symbol=${encodeURIComponent(editForm.symbol)}`);
+                                  if (res.ok) {
+                                    const quote = await res.json() as { symbol: string; price: number };
+                                    marketPrice = Number(quote.price);
+                                  }
+                                } catch {}
+                                if (marketPrice == null || isNaN(marketPrice)) {
+                                  const manual = window.prompt('Price lookup failed. Enter price manually:');
+                                  if (!manual) return;
+                                  const pnum = parseFloat(manual);
+                                  if (isNaN(pnum)) return;
+                                  marketPrice = pnum;
+                                }
+                                const cb = ac * qty;
+                                const mv = marketPrice * qty;
+                                const updated: Position = {
+                                  ...p,
+                                  symbol: editForm.symbol,
+                                  quantity: qty,
+                                  costBasis: cb,
+                                  marketValue: mv,
+                                  unrealizedPnL: mv - cb,
+                                  account: editForm.account || 'MAIN',
+                                  lastUpdated: new Date(),
+                                };
+                                await saveMutation.mutateAsync(updated);
+                                setEditingId(null);
+                              }}
+                            >
+                              Save
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => {
+                                setEditingId(null);
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => {
+                                setEditingId(p.id);
+                                setEditForm({
+                                  symbol: p.symbol,
+                                  quantity: String(p.quantity),
+                                  avgCost: String(p.costBasis / Math.max(p.quantity, 1)),
+                                  account: p.account || 'MAIN',
+                                });
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="destructive" size="sm" onClick={() => deleteMutation.mutate(p.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
